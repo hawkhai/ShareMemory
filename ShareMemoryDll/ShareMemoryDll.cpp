@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ShareMemoryDll.h"
+#include "../TestFileLock/RWFileLock.h"
 
 using namespace ShareMemoryDll;
 
@@ -48,22 +49,19 @@ ShareMemoryData* ShareMemory::getContentPtr() {
 
 ShareMemory::ShareMemory(LPCWSTR lpName, bool write) : m_write(write) {
     assert(lpName);
+    m_lpMapName = L"ShareMemoryMap-";
+    m_sLockedFilePath = L"ShareMemoryLockedFile-";
     if (lpName) {
         m_lpMapName.append(lpName);
-        m_lpReadEventName.append(lpName);
-        m_lpWriteEventName.append(lpName);
+        m_sLockedFilePath.append(lpName);
     }
+    m_sLockedFilePath.append(L".mdb");
+
+    m_pReadFileLock = new NMt::CReadFileLock(m_sLockedFilePath.c_str());
+    m_pWriteFileLock = new NMt::CWriteFileLock(m_sLockedFilePath.c_str());
 }
 
 ShareMemory::~ShareMemory() {
-    if (m_hReadEvent) {
-        CloseHandle(m_hReadEvent);
-        m_hReadEvent = nullptr;
-    }
-    if (m_hWriteEvent) {
-        CloseHandle(m_hWriteEvent);
-        m_hWriteEvent = nullptr;
-    }
     if (m_pBuffer) {
         ::UnmapViewOfFile(m_pBuffer);
         m_pBuffer = nullptr;
@@ -72,6 +70,8 @@ ShareMemory::~ShareMemory() {
         ::CloseHandle(m_hMap);
         m_hMap = nullptr;
     }
+    delete m_pReadFileLock;
+    delete m_pWriteFileLock;
 }
 
 
@@ -79,16 +79,6 @@ ShareMemoryWrite::ShareMemoryWrite(LPCWSTR lpName, int size) : ShareMemory(lpNam
     assert(size >= 0);
     if (size < 0) {
         size = 0;
-    }
-    // lpEventAttributes, bManualReset, bInitialState, lpName
-    m_hReadEvent = CreateEvent(NULL, TRUE, TRUE, m_lpReadEventName.c_str());
-    if (m_hReadEvent == nullptr) {
-        // dwDesiredAccess, bInheritHandle, lpName
-        m_hReadEvent = OpenEvent(EVENT_MODIFY_STATE, TRUE, m_lpReadEventName.c_str());
-    }
-    m_hWriteEvent = CreateEvent(NULL, TRUE, TRUE, m_lpWriteEventName.c_str());
-    if (m_hWriteEvent == nullptr) {
-        m_hWriteEvent = OpenEvent(EVENT_MODIFY_STATE, TRUE, m_lpWriteEventName.c_str());
     }
 
     ShareMemoryHeader header;
@@ -140,20 +130,15 @@ int ShareMemoryWrite::write(ShareMemoryData* data, int size) {
         return -1;
     }
 
-    WaitForSingleObject(m_hReadEvent, INFINITE);
-    ResetEvent(m_hWriteEvent);
+    m_pWriteFileLock->Lock();
 
     int retv = writeImpl(data, size);
 
-    SetEvent(m_hWriteEvent);
+    m_pWriteFileLock->Unlock();
     return retv;
 }
 
 ShareMemoryRead::ShareMemoryRead(LPCWSTR lpName) : ShareMemory(lpName, false) {
-    // dwDesiredAccess, bInheritHandle, lpName
-    m_hReadEvent = OpenEvent(EVENT_MODIFY_STATE, TRUE, m_lpReadEventName.c_str());
-    m_hWriteEvent = OpenEvent(EVENT_MODIFY_STATE, TRUE, m_lpWriteEventName.c_str());
-
     m_hMap = ::OpenFileMapping(FILE_MAP_READ, 0, m_lpMapName.c_str());
     m_pBuffer = (ShareMemoryData*)::MapViewOfFile(m_hMap, FILE_MAP_READ, 0, 0, 0);
     assert(m_pBuffer);
@@ -203,11 +188,10 @@ int ShareMemory::read(std::vector<ShareMemoryData>& data) {
         return -1;
     }
 
-    WaitForSingleObject(m_hWriteEvent, INFINITE);
-    ResetEvent(m_hReadEvent);
+    m_pReadFileLock->Lock();
 
     int retv = readImpl(data);
 
-    SetEvent(m_hReadEvent);
+    m_pReadFileLock->Unlock();
     return retv;
 }

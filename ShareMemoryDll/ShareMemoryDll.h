@@ -6,6 +6,11 @@
 #include <vector>
 #include <assert.h>
 
+namespace NMt {
+    class CReadFileLock;
+    class CWriteFileLock;
+};
+
 #ifdef SHAREMEMORYDLL_EXPORTS
 #define DLLEXPORT __declspec(dllexport)
 #else
@@ -66,16 +71,15 @@ namespace ShareMemoryDll
         static uint64 crc64(const uchar* data, size_t size, uint64 crcx);
 
         bool check() {
-            return m_hReadEvent && m_hWriteEvent && m_hMap && m_pBuffer;
+            return m_pReadFileLock && m_pWriteFileLock && m_hMap && m_pBuffer;
         }
 
     protected:
-        std::wstring m_lpReadEventName = L"Global\\ShareMemoryReadEvent-";
-        std::wstring m_lpWriteEventName = L"Global\\ShareMemoryWriteEvent-";
+        std::wstring m_sLockedFilePath = L"ShareMemoryLockedFile-.mdb";
         std::wstring m_lpMapName = L"ShareMemoryMap-";
         bool m_write = false;
-        HANDLE m_hReadEvent = nullptr;
-        HANDLE m_hWriteEvent = nullptr;
+        NMt::CReadFileLock* m_pReadFileLock = nullptr;
+        NMt::CWriteFileLock* m_pWriteFileLock = nullptr;
         HANDLE m_hMap = nullptr;
         ShareMemoryData* m_pBuffer = nullptr; // LPVOID
     };

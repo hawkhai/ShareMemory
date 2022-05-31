@@ -10,6 +10,8 @@ Implements inter computer read/write locks.
 */
 
 #pragma once
+#include <windows.h>
+#include <atlstr.h>
 
 /*!
 \brief Multi threading.
@@ -117,6 +119,6 @@ namespace NMt
   \brief Displays a message.
   \param[in] xi_cszFormat a message format
   */
-  void DisplayMsg(LPCTSTR xi_cszFormat, ...);
-
+  void DisplayMsg(LPCSTR xi_cszFormat, ...);
+  void DisplayMsg(LPCWSTR xi_cszFormat, ...);
 }

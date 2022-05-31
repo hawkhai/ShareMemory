@@ -1,5 +1,8 @@
 // LOCAL INCLUDES
+//#include "StdAfx.h"
+#ifdef AFX_MSG_BOX
 #include "StdAfx.h"
+#endif
 #include "RWFileLock.h" // declarations
 
 /////////////////////////////// PUBLIC of CRWFileLock ///////////////////////////////////////
@@ -174,13 +177,22 @@ NMt::CRWFileLock::Unlock()
   m_bIsLocked = false;
 }
 
-void 
-NMt::DisplayMsg(LPCTSTR xi_cszFormat, ...)
+void
+NMt::DisplayMsg(LPCSTR xi_cszFormat, ...)
 {
-  CString l_sMsg;
-  va_list l_ArgList;
-  va_start(l_ArgList, xi_cszFormat);
-  l_sMsg.FormatV(xi_cszFormat, l_ArgList);
-  va_end(l_ArgList);
-  ::AfxMessageBox(l_sMsg);
+    CStringA l_sMsg;
+    va_list l_ArgList;
+    va_start(l_ArgList, xi_cszFormat);
+    l_sMsg.FormatV(xi_cszFormat, l_ArgList);
+    va_end(l_ArgList);
+#ifdef AFX_MSG_BOX
+    ::AfxMessageBox(l_sMsg);
+#else
+    printf(l_sMsg.GetString());
+#endif
+}
+
+void
+NMt::DisplayMsg(LPCWSTR xi_cszFormat, ...)
+{
 }

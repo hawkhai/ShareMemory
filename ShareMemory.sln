@@ -10,6 +10,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShareMemory", "ShareMemory\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShareMemoryDll", "ShareMemoryDll\ShareMemoryDll.vcxproj", "{3876EA8E-4A01-42DD-B0A2-950422E402BB}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestFileLock", "TestFileLock\TestFileLock.vcxproj", "{2D9BDD81-44BC-499F-BC23-862189321AC2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -34,6 +36,12 @@ Global
 		{3876EA8E-4A01-42DD-B0A2-950422E402BB}.Release|x64.Build.0 = Release|x64
 		{3876EA8E-4A01-42DD-B0A2-950422E402BB}.Release|x86.ActiveCfg = Release|Win32
 		{3876EA8E-4A01-42DD-B0A2-950422E402BB}.Release|x86.Build.0 = Release|Win32
+		{2D9BDD81-44BC-499F-BC23-862189321AC2}.Debug|x64.ActiveCfg = Debug|Win32
+		{2D9BDD81-44BC-499F-BC23-862189321AC2}.Debug|x86.ActiveCfg = Debug|Win32
+		{2D9BDD81-44BC-499F-BC23-862189321AC2}.Debug|x86.Build.0 = Debug|Win32
+		{2D9BDD81-44BC-499F-BC23-862189321AC2}.Release|x64.ActiveCfg = Release|Win32
+		{2D9BDD81-44BC-499F-BC23-862189321AC2}.Release|x86.ActiveCfg = Release|Win32
+		{2D9BDD81-44BC-499F-BC23-862189321AC2}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

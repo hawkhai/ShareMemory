@@ -33,7 +33,7 @@ void testread() {
         return;
     }
 
-    for (int i = 0; i < 1000 * 60 * 10; i++) {
+    for (int i = 0; i < 1000 * 60; i++) {
         Sleep(1); // dwMilliseconds
 
         std::vector<ShareMemoryData> data;
@@ -52,7 +52,8 @@ void testwrite() {
     if (!sharememory.check()) {
         return;
     }
-    for (int i = 0; i < 1000 * 60 * 10; i++) {
+
+    for (int i = 0; i < 1000 * 60; i++) {
         Sleep(1); // dwMilliseconds
 
         TestData testData(true);
