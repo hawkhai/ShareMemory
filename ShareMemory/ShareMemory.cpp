@@ -38,10 +38,12 @@ void testread() {
         Sleep(1); // dwMilliseconds
 
         ShareMemoryData* data = nullptr;
-        if (sharememory.read(data, &callback) >= 1) {
+        int datasize = 0;
+        if ((datasize = sharememory.read(data, &callback)) >= 1) {
             TestData* testData = (TestData*)&data[0];
             uint64 crc = sharememory.crc64((const uchar*)testData->buffer, TEST_DATA_SIZE, 0);
             assert(crc == testData->crc);
+            assert(datasize == sizeof(TestData));
             printf("read %d. %llu \r\n", i, crc);
         }
         if (data) {

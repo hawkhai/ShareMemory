@@ -13,30 +13,30 @@ NMt::CRWFileLock::CRWFileLock(bool xi_bIsReadLock, LPCTSTR xi_cszFilePath, bool 
   m_bIsReadLock(xi_bIsReadLock), m_bIsLocked(false),
   m_hReaderWriterLockFile(0), m_hWriterLockFile(0), m_nPollPeriodMs(xi_nPollPeriodMs)
 {
-    wchar_t fpath[MAX_PATH + 1] = { 0 };
+    TCHAR fpath[MAX_PATH + 1] = { 0 };
     DWORD res = GetTempPath(MAX_PATH, fpath);
     if (res <= 0 || res >= MAX_PATH) {
         // ignore...
     }
 
-    if (fpath[0] && fpath[wcslen(fpath) - 1] != L'\\') {
-        wcscat_s(fpath, L"\\");
+    if (fpath[0] && fpath[_tcslen(fpath) - 1] != L'\\') {
+        _tcscat_s(fpath, MAX_PATH, L"\\");
     }
     if (!PathFileExists(fpath)) {
         CreateDirectory(fpath, NULL);
     }
 
-    wcscat_s(fpath, MAX_PATH, L"rwfilelock");
-    if (fpath[0] && fpath[wcslen(fpath) - 1] != L'\\') {
-        wcscat_s(fpath, L"\\");
+    _tcscat_s(fpath, MAX_PATH, L"rwfilelock");
+    if (fpath[0] && fpath[_tcslen(fpath) - 1] != L'\\') {
+        _tcscat_s(fpath, MAX_PATH, L"\\");
     }
     if (!PathFileExists(fpath)) {
         CreateDirectory(fpath, NULL);
     }
 
-    int start = wcslen(fpath);
-    wcscat_s(fpath, xi_cszFilePath);
-    int endx = wcslen(fpath);
+    int start = _tcslen(fpath);
+    _tcscat_s(fpath, xi_cszFilePath);
+    int endx = _tcslen(fpath);
     for (int i = start; i < endx; i++) {
         if (fpath[i] == L':' ||
             fpath[i] == L'\\' ||
