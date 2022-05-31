@@ -5,6 +5,10 @@ VisualStudioVersion = 16.0.31911.196
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShareMemory", "ShareMemory\ShareMemory.vcxproj", "{8997BFA6-3C35-4FA8-B43D-AE90FA6ED575}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShareMemoryWrite", "ShareMemoryWrite\ShareMemoryWrite.vcxproj", "{F84E2EAC-6486-4705-ADC5-52F691FB3578}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShareMemoryRead", "ShareMemoryRead\ShareMemoryRead.vcxproj", "{0F477966-178C-42CA-B623-776F521D9E8E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +25,22 @@ Global
 		{8997BFA6-3C35-4FA8-B43D-AE90FA6ED575}.Release|x64.Build.0 = Release|x64
 		{8997BFA6-3C35-4FA8-B43D-AE90FA6ED575}.Release|x86.ActiveCfg = Release|Win32
 		{8997BFA6-3C35-4FA8-B43D-AE90FA6ED575}.Release|x86.Build.0 = Release|Win32
+		{F84E2EAC-6486-4705-ADC5-52F691FB3578}.Debug|x64.ActiveCfg = Debug|x64
+		{F84E2EAC-6486-4705-ADC5-52F691FB3578}.Debug|x64.Build.0 = Debug|x64
+		{F84E2EAC-6486-4705-ADC5-52F691FB3578}.Debug|x86.ActiveCfg = Debug|Win32
+		{F84E2EAC-6486-4705-ADC5-52F691FB3578}.Debug|x86.Build.0 = Debug|Win32
+		{F84E2EAC-6486-4705-ADC5-52F691FB3578}.Release|x64.ActiveCfg = Release|x64
+		{F84E2EAC-6486-4705-ADC5-52F691FB3578}.Release|x64.Build.0 = Release|x64
+		{F84E2EAC-6486-4705-ADC5-52F691FB3578}.Release|x86.ActiveCfg = Release|Win32
+		{F84E2EAC-6486-4705-ADC5-52F691FB3578}.Release|x86.Build.0 = Release|Win32
+		{0F477966-178C-42CA-B623-776F521D9E8E}.Debug|x64.ActiveCfg = Debug|x64
+		{0F477966-178C-42CA-B623-776F521D9E8E}.Debug|x64.Build.0 = Debug|x64
+		{0F477966-178C-42CA-B623-776F521D9E8E}.Debug|x86.ActiveCfg = Debug|Win32
+		{0F477966-178C-42CA-B623-776F521D9E8E}.Debug|x86.Build.0 = Debug|Win32
+		{0F477966-178C-42CA-B623-776F521D9E8E}.Release|x64.ActiveCfg = Release|x64
+		{0F477966-178C-42CA-B623-776F521D9E8E}.Release|x64.Build.0 = Release|x64
+		{0F477966-178C-42CA-B623-776F521D9E8E}.Release|x86.ActiveCfg = Release|Win32
+		{0F477966-178C-42CA-B623-776F521D9E8E}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
