@@ -195,9 +195,9 @@ int ShareMemory::readImpl(ShareMemoryData*& data, IShareMemoryInterface* callbac
     memcpy(&data[0], getContentPtr(), contentSize);
     data[contentSize] = 0;
     auto crcCheck = crc64(data, contentSize, 0);
-    printf("memorySize=%d contentSize=%d check=%d \r\n", //
-        header->memorySize, header->contentSize,
-        crcCheck == header->crcCheck);
+    //printf("memorySize=%d contentSize=%d check=%d \r\n", //
+    //    header->memorySize, header->contentSize,
+    //    crcCheck == header->crcCheck);
     return contentSize;
 }
 
