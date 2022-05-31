@@ -188,10 +188,11 @@ int ShareMemory::readImpl(ShareMemoryData*& data, IShareMemoryInterface* callbac
         return -1;
     }
 
-    data = callback->alloc(header->contentSize + 1);
-    memcpy(&data[0], getContentPtr(), header->contentSize);
-    data[header->contentSize] = 0;
-    return header->contentSize;
+    int contentSize = header->contentSize;
+    data = callback->alloc(contentSize + 1);
+    memcpy(&data[0], getContentPtr(), contentSize);
+    data[contentSize] = 0;
+    return contentSize;
 }
 
 int ShareMemory::read(ShareMemoryData*& data, IShareMemoryInterface* callback) {

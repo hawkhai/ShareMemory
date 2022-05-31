@@ -52,7 +52,9 @@ namespace ShareMemoryDll
     class CShareMemoryCallback : public IShareMemoryInterface {
     public:
         virtual ShareMemoryData* alloc(int size) {
-            return new ShareMemoryData[size + 1]; // 多弄一个。
+            auto retv = new ShareMemoryData[size + 1]; // 多弄一个。
+            retv[size] = '$';
+            return retv;
         }
         virtual void free(ShareMemoryData* data) {
             delete[] data;
