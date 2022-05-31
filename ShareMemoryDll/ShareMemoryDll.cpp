@@ -121,6 +121,7 @@ int ShareMemoryWrite::writeImpl(ShareMemoryData* data, int size) {
 
     assert(header == (ShareMemoryHeader*)m_pBuffer); // 断言直接指内存。
     header->contentSize = size;
+    header->crcCheck = crc64(data, size, 0);
     memcpy(m_pBuffer, header, getHeadSize()); // 重新把头刷进去。
     memcpy(getContentPtr(), data, size);
     ShareMemoryTail tail;
@@ -193,7 +194,10 @@ int ShareMemory::readImpl(ShareMemoryData*& data, IShareMemoryInterface* callbac
     data = callback->alloc(contentSize + 1);
     memcpy(&data[0], getContentPtr(), contentSize);
     data[contentSize] = 0;
-    // printf("memorySize=%d contentSize=%d \r\n", header->memorySize, header->contentSize);
+    auto crcCheck = crc64(data, contentSize, 0);
+    printf("memorySize=%d contentSize=%d check=%d \r\n", //
+        header->memorySize, header->contentSize,
+        crcCheck == header->crcCheck);
     return contentSize;
 }
 

@@ -36,6 +36,7 @@ namespace ShareMemoryDll
         INT32 headSize = 0; // 头的大小。
         INT32 contentSize = 0; // 内容的大小。可以变化的，不一定要写满。
         INT32 tailSize = 0; // 尾巴的大小。
+        UINT64 crcCheck = 0;
         INT32 varReserved = 0; // 保留字段。
 
         INT32 getMaxContentSize() {
