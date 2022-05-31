@@ -33,15 +33,19 @@ void testread() {
         return;
     }
 
+    CShareMemoryCallback callback;
     for (int i = 0; i < 1000 * 60; i++) {
         Sleep(1); // dwMilliseconds
 
-        std::vector<ShareMemoryData> data;
-        if (sharememory.read(data) >= 1) {
+        ShareMemoryData* data = nullptr;
+        if (sharememory.read(data, &callback) >= 1) {
             TestData* testData = (TestData*)&data[0];
             uint64 crc = sharememory.crc64((const uchar*)testData->buffer, TEST_DATA_SIZE, 0);
             assert(crc == testData->crc);
             printf("read %d. %llu \r\n", i, crc);
+        }
+        if (data) {
+            callback.free(data);
         }
     }
 }

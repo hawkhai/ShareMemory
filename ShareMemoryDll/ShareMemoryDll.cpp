@@ -169,28 +169,33 @@ uint64 ShareMemory::crc64(const uchar* data, size_t size, uint64 crcx)
     return ~crc;
 }
 
-int ShareMemory::readImpl(std::vector<ShareMemoryData>& data) {
+int ShareMemory::readImpl(ShareMemoryData*& data, IShareMemoryInterface* callback) {
+
+    assert(data == nullptr);
+    if (!m_pBuffer || !callback) {
+        return -1;
+    }
 
     ShareMemoryHeader* header = getMemoryHeader();
     if (!header) {
         return -1;
     }
 
-    data.resize(header->contentSize + 1);
+    data = callback->alloc(header->contentSize + 1);
     memcpy(&data[0], getContentPtr(), header->contentSize);
     data[header->contentSize] = 0;
     return header->contentSize;
 }
 
-int ShareMemory::read(std::vector<ShareMemoryData>& data) {
+int ShareMemory::read(ShareMemoryData*& data, IShareMemoryInterface* callback) {
 
-    if (!m_pBuffer) {
+    if (!m_pBuffer || !callback) {
         return -1;
     }
 
     m_pReadFileLock->Lock();
 
-    int retv = readImpl(data);
+    int retv = readImpl(data, callback);
 
     m_pReadFileLock->Unlock();
     return retv;

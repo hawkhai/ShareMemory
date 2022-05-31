@@ -43,6 +43,22 @@ namespace ShareMemoryDll
         }
     };
 
+    __interface IShareMemoryInterface
+    {
+        virtual ShareMemoryData* alloc(int size) = 0;
+        virtual void free(ShareMemoryData* data) = 0;
+    };
+
+    class CShareMemoryCallback : public IShareMemoryInterface {
+    public:
+        virtual ShareMemoryData* alloc(int size) {
+            return new ShareMemoryData[size + 1]; // ¶àÅªÒ»¸ö¡£
+        }
+        virtual void free(ShareMemoryData* data) {
+            delete[] data;
+        }
+    };
+
     class DLLEXPORT ShareMemory {
     protected:
         const int getHeadSize();
@@ -63,10 +79,10 @@ namespace ShareMemoryDll
         virtual ~ShareMemory();
 
     private:
-        int readImpl(std::vector<ShareMemoryData>& data);
+        int readImpl(ShareMemoryData*& data, IShareMemoryInterface* callback);
 
     public:
-        int read(std::vector<ShareMemoryData>& data);
+        int read(ShareMemoryData*& data, IShareMemoryInterface* callback);
         // Computes 64-bit "cyclic redundancy check" sum, as specified in ECMA-182
         static uint64 crc64(const uchar* data, size_t size, uint64 crcx);
 
