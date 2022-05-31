@@ -103,6 +103,7 @@ namespace ShareMemoryDll
     class DLLEXPORT ShareMemoryWrite : public ShareMemory {
     public:
         ShareMemoryWrite(LPCWSTR lpName, int size);
+        ~ShareMemoryWrite();
 
     private:
         int writeImpl(ShareMemoryData* data, int size);
@@ -114,5 +115,6 @@ namespace ShareMemoryDll
     class DLLEXPORT ShareMemoryRead : public ShareMemory {
     public:
         ShareMemoryRead(LPCWSTR lpName);
+        ~ShareMemoryRead();
     };
 };
