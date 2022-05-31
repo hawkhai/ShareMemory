@@ -26,7 +26,7 @@ NMt::CRWFileLock::CRWFileLock(bool xi_bIsReadLock, LPCTSTR xi_cszFilePath, bool 
         CreateDirectory(fpath, NULL);
     }
 
-    wcscpy_s(fpath, MAX_PATH, L"rwfilelock");
+    wcscat_s(fpath, MAX_PATH, L"rwfilelock");
     if (fpath[0] && fpath[wcslen(fpath) - 1] != L'\\') {
         wcscat_s(fpath, L"\\");
     }
