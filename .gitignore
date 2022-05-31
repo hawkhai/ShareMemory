@@ -1,5 +1,7 @@
 .vs
 Debug
+DebugLib
 *.user
 Release
-/UpgradeLog.htm
+ReleaseLib
+UpgradeLog.htm
