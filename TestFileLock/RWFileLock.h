@@ -13,6 +13,8 @@ Implements inter computer read/write locks.
 #include <windows.h>
 #include <atlstr.h>
 
+#define POLL_PERIOD_DEFAULT 15 // 基本上能达到 60 帧的水平。
+
 /*!
 \brief Multi threading.
 */
@@ -33,7 +35,7 @@ namespace NMt
     \param[in] xi_nPollPeriodMs polling period (milliseconds)
     */
     CRWFileLock(bool xi_bIsReadLock, LPCTSTR xi_cszFilePath, bool xi_bInitialLock = false, 
-      DWORD xi_nPollPeriodMs = 1000);
+      DWORD xi_nPollPeriodMs = POLL_PERIOD_DEFAULT);
     /*!
     \brief Destructor.
     */
@@ -95,7 +97,7 @@ namespace NMt
     \param[in] xi_bInitialLock if it is initially locked
     \param[in] xi_nPollPeriodMs polling period (milliseconds)
     */
-    CReadFileLock(LPCTSTR xi_cszFilePath, bool xi_bInitialLock = false, DWORD xi_nPollPeriodMs = 1000) :
+    CReadFileLock(LPCTSTR xi_cszFilePath, bool xi_bInitialLock = false, DWORD xi_nPollPeriodMs = POLL_PERIOD_DEFAULT) :
         CRWFileLock(true, xi_cszFilePath, xi_bInitialLock, xi_nPollPeriodMs) {}
   };
   /*!
@@ -111,7 +113,7 @@ namespace NMt
     \param[in] xi_bInitialLock if it is initially locked
     \param[in] xi_nPollPeriodMs polling period (milliseconds)
     */
-    CWriteFileLock(LPCTSTR xi_cszFilePath, bool xi_bInitialLock = false, DWORD xi_nPollPeriodMs = 1000) :
+    CWriteFileLock(LPCTSTR xi_cszFilePath, bool xi_bInitialLock = false, DWORD xi_nPollPeriodMs = POLL_PERIOD_DEFAULT) :
         CRWFileLock(false, xi_cszFilePath, xi_bInitialLock, xi_nPollPeriodMs) {}
   };
 
