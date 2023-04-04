@@ -1,7 +1,6 @@
 ﻿#include <windows.h>
 #include <iostream>
 #include <string>
-#include <cstring>
 #include <vector>
 #include <assert.h>
 #include "../ShareMemoryDll/ShareMemoryDll.h"
