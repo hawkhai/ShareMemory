@@ -8,17 +8,13 @@ const int ShareMemory::getHeadSize() {
     return sizeof(ShareMemoryHeader);
 }
 
-const int ShareMemory::getTailSize() {
-    return sizeof(ShareMemoryTail);
-}
-
 ShareMemoryHeader* ShareMemory::getMemoryHeader() {
     if (!m_pBuffer) {
         return nullptr;
     }
     ShareMemoryHeader* header = (ShareMemoryHeader*)m_pBuffer;
     // 估计是版本不对。
-    if (header->headSize != getHeadSize() || header->tailSize != getTailSize()) {
+    if (header->headSize != getHeadSize()) {
         return nullptr;
     }
     return header;
@@ -83,12 +79,11 @@ ShareMemoryWrite::ShareMemoryWrite(LPCWSTR lpName, int size) : ShareMemory(lpNam
     if (size < 0) {
         size = 0;
     }
-
+    this->m_size = size;
     ShareMemoryHeader header;
     header.headSize = getHeadSize();
     header.contentSize = 0; // 初始为空。
-    header.tailSize = getTailSize();
-    header.memorySize = size + getHeadSize() + getTailSize();
+    header.memorySize = size + getHeadSize();
 
     m_hMap = ::CreateFileMapping(INVALID_HANDLE_VALUE, //
         NULL, //
@@ -103,9 +98,6 @@ ShareMemoryWrite::ShareMemoryWrite(LPCWSTR lpName, int size) : ShareMemory(lpNam
     assert(m_pBuffer);
     if (m_pBuffer) { // 把头刷进去。
         memcpy(m_pBuffer, &header, sizeof(header));
-        ShareMemoryTail tail;
-        tail = 0; // 把尾巴再刷进去。
-        memcpy(getContentPtr(), &tail, sizeof(tail));
     }
 }
 
@@ -116,6 +108,7 @@ int ShareMemoryWrite::writeImpl(ShareMemoryData* data, int size) {
         return -1;
     }
     if (size > header->getMaxContentSize()) {
+        assert(false);
         size = header->getMaxContentSize(); // 截断写入。
     }
 
@@ -124,9 +117,6 @@ int ShareMemoryWrite::writeImpl(ShareMemoryData* data, int size) {
     header->crcCheck = crc64(data, size, 0);
     memcpy(m_pBuffer, header, getHeadSize()); // 重新把头刷进去。
     memcpy(getContentPtr(), data, size);
-    ShareMemoryTail tail;
-    tail = 0; // 把尾巴再刷进去。
-    memcpy(getContentPtr() + size, &tail, sizeof(tail));
     return size;
 }
 
@@ -136,6 +126,11 @@ int ShareMemoryWrite::write(ShareMemoryData* data, int size) {
     }
 
     m_pWriteFileLock->Lock();
+
+    if (size > m_size) {
+        // 超出了。
+        assert(false);
+    }
 
     int retv = writeImpl(data, size);
 
