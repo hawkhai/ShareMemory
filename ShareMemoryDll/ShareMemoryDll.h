@@ -103,6 +103,9 @@ namespace ShareMemoryDll
     public:
         ShareMemoryWrite(LPCWSTR lpName, int size);
         ~ShareMemoryWrite();
+        int getSize() {
+            return m_size;
+        }
 
     private:
         int writeImpl(ShareMemoryData* data, int size);
