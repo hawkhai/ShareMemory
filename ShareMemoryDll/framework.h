@@ -5,7 +5,7 @@
 #include <windows.h>
 
 #ifdef SHAREMEMORYDLL_EXPORTS
-#define DLLEXPORT __declspec(dllexport)
+#define SHARE_MEMORY_DLLEXPORT __declspec(dllexport)
 #else
-#define DLLEXPORT //__declspec(dllimport)
+#define SHARE_MEMORY_DLLEXPORT //__declspec(dllimport)
 #endif

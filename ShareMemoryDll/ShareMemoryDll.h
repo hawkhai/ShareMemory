@@ -12,9 +12,9 @@ namespace NMt {
 };
 
 #ifdef SHAREMEMORYDLL_EXPORTS
-#define DLLEXPORT __declspec(dllexport)
+#define SHARE_MEMORY_DLLEXPORT __declspec(dllexport)
 #else
-#define DLLEXPORT //__declspec(dllimport)
+#define SHARE_MEMORY_DLLEXPORT //__declspec(dllimport)
 #endif
 
 namespace ShareMemoryDll
@@ -60,7 +60,7 @@ namespace ShareMemoryDll
         }
     };
 
-    class DLLEXPORT ShareMemory {
+    class SHARE_MEMORY_DLLEXPORT ShareMemory {
     protected:
         const int getHeadSize();
 
@@ -99,14 +99,14 @@ namespace ShareMemoryDll
         ShareMemoryData* m_pBuffer = nullptr; // LPVOID
     };
 
-    class DLLEXPORT ShareMemoryWrite : public ShareMemory {
+    class SHARE_MEMORY_DLLEXPORT ShareMemoryWrite : public ShareMemory {
     public:
         ShareMemoryWrite(LPCWSTR lpName, int size);
         ~ShareMemoryWrite();
         int getSize() {
             return m_size;
         }
-
+        
     private:
         int writeImpl(ShareMemoryData* data, int size);
 
@@ -117,7 +117,7 @@ namespace ShareMemoryDll
         int m_size = 0;
     };
 
-    class DLLEXPORT ShareMemoryRead : public ShareMemory {
+    class SHARE_MEMORY_DLLEXPORT ShareMemoryRead : public ShareMemory {
     public:
         ShareMemoryRead(LPCWSTR lpName);
         ~ShareMemoryRead();
