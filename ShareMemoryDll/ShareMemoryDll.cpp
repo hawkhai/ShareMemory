@@ -126,6 +126,7 @@ int ShareMemoryWrite::write(ShareMemoryData* data, int size) {
     }
 
     m_pWriteFileLock->Lock();
+    assert(m_pWriteFileLock->isLocked());
 
     if (size > m_size) {
         // ณฌณ๖มหกฃ

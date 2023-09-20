@@ -51,6 +51,10 @@ namespace NMt
     */
     void Unlock();
 
+    bool isLocked() {
+        return m_bIsLocked;
+    }
+
   protected:
     // DATA MEMBERS
     /*!
@@ -64,23 +68,23 @@ namespace NMt
     /*!
     \brief Readers/Writers lock file.
     */
-    HANDLE m_hReaderWriterLockFile;
+    HANDLE m_hReaderWriterLockFile = 0;
     /*!
     \brief Writers lock file.
     */
-    HANDLE m_hWriterLockFile;
+    HANDLE m_hWriterLockFile = 0;
     /*!
     \brief If it is locked.
     */
-    bool m_bIsLocked;
+    bool m_bIsLocked = false;
     /*!
     \brief If it is a read lock.
     */
-    bool m_bIsReadLock;
+    bool m_bIsReadLock = false;
     /*!
     \brief Polling period (milliseconds).
     */
-    DWORD m_nPollPeriodMs;
+    DWORD m_nPollPeriodMs = 0;
 
   };
 
