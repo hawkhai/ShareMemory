@@ -142,7 +142,7 @@ int ShareMemoryWrite::write(ShareMemoryData* data, int size) {
 ShareMemoryRead::ShareMemoryRead(LPCWSTR lpName) : ShareMemory(lpName, false) {
     m_hMap = ::OpenFileMapping(FILE_MAP_READ, 0, m_lpMapName.c_str());
     m_pBuffer = (ShareMemoryData*)::MapViewOfFile(m_hMap, FILE_MAP_READ, 0, 0, 0);
-    assert(m_pBuffer);
+    //assert(m_pBuffer);
 }
 
 ShareMemoryRead::~ShareMemoryRead() {
