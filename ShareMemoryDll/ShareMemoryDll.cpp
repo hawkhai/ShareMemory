@@ -1,4 +1,4 @@
-#include "pch.h"
+ï»¿#include "pch.h"
 #include "ShareMemoryDll.h"
 #include "../TestFileLock/RWFileLock.h"
 
@@ -13,7 +13,7 @@ ShareMemoryHeader* ShareMemory::getMemoryHeader() {
         return nullptr;
     }
     ShareMemoryHeader* header = (ShareMemoryHeader*)m_pBuffer;
-    // ¹À¼ÆÊÇ°æ±¾²»¶Ô¡£
+    // ä¼°è®¡æ˜¯ç‰ˆæœ¬ä¸å¯¹ã€‚
     if (header->headSize != getHeadSize()) {
         return nullptr;
     }
@@ -82,7 +82,7 @@ ShareMemoryWrite::ShareMemoryWrite(LPCWSTR lpName, int size) : ShareMemory(lpNam
     this->m_size = size;
     ShareMemoryHeader header;
     header.headSize = getHeadSize();
-    header.contentSize = 0; // ³õÊ¼Îª¿Õ¡£
+    header.contentSize = 0; // åˆå§‹ä¸ºç©ºã€‚
     header.memorySize = size + getHeadSize();
 
     m_hMap = ::CreateFileMapping(INVALID_HANDLE_VALUE, //
@@ -96,7 +96,7 @@ ShareMemoryWrite::ShareMemoryWrite(LPCWSTR lpName, int size) : ShareMemory(lpNam
 
     m_pBuffer = (ShareMemoryData*)::MapViewOfFile(m_hMap, FILE_MAP_ALL_ACCESS, 0, 0, 0);
     assert(m_pBuffer);
-    if (m_pBuffer) { // °ÑÍ·Ë¢½øÈ¥¡£
+    if (m_pBuffer) { // æŠŠå¤´åˆ·è¿›åŽ»ã€‚
         memcpy(m_pBuffer, &header, sizeof(header));
     }
 }
@@ -109,13 +109,13 @@ int ShareMemoryWrite::writeImpl(ShareMemoryData* data, int size) {
     }
     if (size > header->getMaxContentSize()) {
         assert(false);
-        size = header->getMaxContentSize(); // ½Ø¶ÏÐ´Èë¡£
+        size = header->getMaxContentSize(); // æˆªæ–­å†™å…¥ã€‚
     }
 
-    assert(header == (ShareMemoryHeader*)m_pBuffer); // ¶ÏÑÔÖ±½ÓÖ¸ÄÚ´æ¡£
+    assert(header == (ShareMemoryHeader*)m_pBuffer); // æ–­è¨€ç›´æŽ¥æŒ‡å†…å­˜ã€‚
     header->contentSize = size;
     header->crcCheck = crc64(data, size, 0);
-    memcpy(m_pBuffer, header, getHeadSize()); // ÖØÐÂ°ÑÍ·Ë¢½øÈ¥¡£
+    memcpy(m_pBuffer, header, getHeadSize()); // é‡æ–°æŠŠå¤´åˆ·è¿›åŽ»ã€‚
     memcpy(getContentPtr(), data, size);
     return size;
 }
@@ -129,7 +129,7 @@ int ShareMemoryWrite::write(ShareMemoryData* data, int size) {
     assert(m_pWriteFileLock->isLocked());
 
     if (size > m_size) {
-        // ³¬³öÁË¡£
+        // è¶…å‡ºäº†ã€‚
         assert(false);
     }
 

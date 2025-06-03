@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -34,11 +34,11 @@ namespace ShareMemoryDll
     typedef unsigned char ShareMemoryData;
 
     struct ShareMemoryHeader {
-        INT32 memorySize = 0; // Õû¸öÄÚ´æ¿éµÄ´óĞ¡¡£
-        INT32 headSize = 0; // Í·µÄ´óĞ¡¡£
-        INT32 contentSize = 0; // ÄÚÈİµÄ´óĞ¡¡£¿ÉÒÔ±ä»¯µÄ£¬²»Ò»¶¨ÒªĞ´Âú¡£
+        INT32 memorySize = 0; // æ•´ä¸ªå†…å­˜å—çš„å¤§å°ã€‚
+        INT32 headSize = 0; // å¤´çš„å¤§å°ã€‚
+        INT32 contentSize = 0; // å†…å®¹çš„å¤§å°ã€‚å¯ä»¥å˜åŒ–çš„ï¼Œä¸ä¸€å®šè¦å†™æ»¡ã€‚
         UINT64 crcCheck = 0;
-        INT32 varReserved = 0; // ±£Áô×Ö¶Î¡£
+        INT32 varReserved = 0; // ä¿ç•™å­—æ®µã€‚
 
         INT32 getMaxContentSize() {
             return memorySize - headSize;
@@ -54,7 +54,7 @@ namespace ShareMemoryDll
     class CShareMemoryCallback : public IShareMemoryInterface {
     public:
         virtual ShareMemoryData* alloc(int size) {
-            auto retv = new ShareMemoryData[size + 1]; // ¶àÅªÒ»¸ö¡£
+            auto retv = new ShareMemoryData[size + 1]; // å¤šå¼„ä¸€ä¸ªã€‚
             retv[size] = 0;
             return retv;
         }
