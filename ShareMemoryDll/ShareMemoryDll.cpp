@@ -6,6 +6,190 @@
 
 using namespace ShareMemoryDll;
 
+
+// 全局锁文件注册表和管理函数
+namespace {
+    // 使用进程内单例管理锁文件引用计数
+    class LockFileRegistry {
+    public:
+        static LockFileRegistry& getInstance() {
+            static LockFileRegistry instance;
+            return instance;
+        }
+
+        // 注册锁文件
+        void registerFile(const std::wstring& filePath) {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_lockFiles[filePath]++;
+        }
+
+        // 取消注册锁文件
+        void unregisterFile(const std::wstring& filePath) {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            auto it = m_lockFiles.find(filePath);
+            if (it != m_lockFiles.end()) {
+                if (--it->second <= 0) {
+                    m_lockFiles.erase(it);
+                    cleanupLockFile(filePath);
+                }
+            }
+        }
+
+        // 清理所有不再使用的锁文件
+        void cleanupStaleFiles() {
+            try {
+                TCHAR tempPath[MAX_PATH] = { 0 };
+                GetTempPath(MAX_PATH, tempPath);
+                std::wstring lockBasePath = tempPath;
+                if (lockBasePath.back() != L'\\') {
+                    lockBasePath += L"\\";
+                }
+                lockBasePath += L"rwfilelock\\";
+
+                // 确保目录存在
+                if (!PathFileExists(lockBasePath.c_str())) {
+                    return;
+                }
+
+                WIN32_FIND_DATA findData;
+                HANDLE hFind = FindFirstFile((lockBasePath + L"*.wlc").c_str(), &findData);
+
+                if (hFind != INVALID_HANDLE_VALUE) {
+                    do {
+                        // 跳过目录
+                        if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                            continue;
+                        }
+
+                        std::wstring fullPath = lockBasePath + findData.cFileName;
+
+                        // 检查文件是否被使用中
+                        bool inUse = false;
+                        {
+                            std::lock_guard<std::mutex> lock(m_mutex);
+                            std::wstring baseName = findData.cFileName;
+                            // 移除.wlc扩展名，得到基本文件名
+                            size_t extPos = baseName.rfind(L".wlc");
+                            if (extPos != std::wstring::npos) {
+                                baseName = baseName.substr(0, extPos);
+                            }
+
+                            // 检查任何以这个基本名称开头的锁文件是否在使用中
+                            for (const auto& entry : m_lockFiles) {
+                                if (entry.first.find(baseName) != std::wstring::npos) {
+                                    inUse = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!inUse) {
+                            // 安全地尝试打开并删除未使用的文件
+                            HANDLE hFile = CreateFile(fullPath.c_str(),
+                                GENERIC_READ,
+                                FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                NULL,
+                                OPEN_EXISTING,
+                                FILE_ATTRIBUTE_NORMAL,
+                                NULL);
+
+                            if (hFile != INVALID_HANDLE_VALUE) {
+                                CloseHandle(hFile);
+                                DeleteFile(fullPath.c_str());
+
+                                // 同时删除对应的.rlc文件
+                                std::wstring rlcPath = fullPath;
+                                size_t extPos = rlcPath.rfind(L".wlc");
+                                if (extPos != std::wstring::npos) {
+                                    rlcPath = rlcPath.substr(0, extPos) + L".rlc";
+                                    DeleteFile(rlcPath.c_str());
+                                }
+                            }
+                        }
+                    } while (FindNextFile(hFind, &findData));
+
+                    FindClose(hFind);
+                }
+            }
+            catch (...) {
+                // 忽略清理过程中的任何异常
+            }
+        }
+
+    private:
+        LockFileRegistry() {
+            // 注册进程退出回调，确保程序退出时清理锁文件
+            std::atexit([]() {
+                LockFileRegistry::getInstance().cleanupStaleFiles();
+                });
+        }
+
+        ~LockFileRegistry() {
+            cleanupStaleFiles();
+        }
+
+        void cleanupLockFile(const std::wstring& filePath) {
+            // 防止多线程同时清理同一个文件
+            std::lock_guard<std::mutex> lock(m_mutex);
+            try {
+                // 构造锁文件路径
+                TCHAR tempPath[MAX_PATH] = { 0 };
+                GetTempPath(MAX_PATH, tempPath);
+                std::wstring lockBasePath = tempPath;
+                if (lockBasePath.back() != L'\\') {
+                    lockBasePath += L"\\";
+                }
+                lockBasePath += L"rwfilelock\\";
+
+                // 获取基本文件名
+                std::wstring filename = filePath;
+                size_t pos = filename.find_last_of(L"\\/");
+                if (pos != std::wstring::npos) {
+                    filename = filename.substr(pos + 1);
+                }
+
+                // 构造读写锁文件路径
+                std::wstring readerWriterLockPath = lockBasePath + filename + L".rlc";
+                std::wstring writerLockPath = lockBasePath + filename + L".wlc";
+
+                // 安全地删除文件
+                // 尝试以独占方式打开文件，确保没有其他进程正在使用
+                HANDLE hFile = CreateFile(readerWriterLockPath.c_str(),
+                    GENERIC_READ | GENERIC_WRITE,
+                    0, // 不共享，确保独占访问
+                    NULL,
+                    OPEN_EXISTING,
+                    FILE_ATTRIBUTE_NORMAL,
+                    NULL);
+
+                if (hFile != INVALID_HANDLE_VALUE) {
+                    CloseHandle(hFile);
+                    DeleteFile(readerWriterLockPath.c_str());
+                }
+
+                hFile = CreateFile(writerLockPath.c_str(),
+                    GENERIC_READ | GENERIC_WRITE,
+                    0, // 不共享，确保独占访问
+                    NULL,
+                    OPEN_EXISTING,
+                    FILE_ATTRIBUTE_NORMAL,
+                    NULL);
+
+                if (hFile != INVALID_HANDLE_VALUE) {
+                    CloseHandle(hFile);
+                    DeleteFile(writerLockPath.c_str());
+                }
+            }
+            catch (...) {
+                // 忽略清理过程中的任何异常
+            }
+        }
+
+        std::mutex m_mutex;
+        std::map<std::wstring, int> m_lockFiles; // 文件路径到引用计数的映射
+    };
+}
+
 const int ShareMemory::getHeadSize() {
     return sizeof(ShareMemoryHeader);
 }
@@ -276,189 +460,6 @@ int ShareMemory::read(ShareMemoryData*& data, IShareMemoryInterface* callback) {
     // 读取操作现在被锁保护
     int retv = readImpl(data, callback);
     return retv;
-}
-
-// 全局锁文件注册表和管理函数
-namespace {
-    // 使用进程内单例管理锁文件引用计数
-    class LockFileRegistry {
-    public:
-        static LockFileRegistry& getInstance() {
-            static LockFileRegistry instance;
-            return instance;
-        }
-
-        // 注册锁文件
-        void registerFile(const std::wstring& filePath) {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            m_lockFiles[filePath]++;
-        }
-
-        // 取消注册锁文件
-        void unregisterFile(const std::wstring& filePath) {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            auto it = m_lockFiles.find(filePath);
-            if (it != m_lockFiles.end()) {
-                if (--it->second <= 0) {
-                    m_lockFiles.erase(it);
-                    cleanupLockFile(filePath);
-                }
-            }
-        }
-
-        // 清理所有不再使用的锁文件
-        void cleanupStaleFiles() {
-            try {
-                TCHAR tempPath[MAX_PATH] = { 0 };
-                GetTempPath(MAX_PATH, tempPath);
-                std::wstring lockBasePath = tempPath;
-                if (lockBasePath.back() != L'\\') {
-                    lockBasePath += L"\\";
-                }
-                lockBasePath += L"rwfilelock\\";
-
-                // 确保目录存在
-                if (!PathFileExists(lockBasePath.c_str())) {
-                    return;
-                }
-
-                WIN32_FIND_DATA findData;
-                HANDLE hFind = FindFirstFile((lockBasePath + L"*.wlc").c_str(), &findData);
-
-                if (hFind != INVALID_HANDLE_VALUE) {
-                    do {
-                        // 跳过目录
-                        if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                            continue;
-                        }
-
-                        std::wstring fullPath = lockBasePath + findData.cFileName;
-
-                        // 检查文件是否被使用中
-                        bool inUse = false;
-                        {
-                            std::lock_guard<std::mutex> lock(m_mutex);
-                            std::wstring baseName = findData.cFileName;
-                            // 移除.wlc扩展名，得到基本文件名
-                            size_t extPos = baseName.rfind(L".wlc");
-                            if (extPos != std::wstring::npos) {
-                                baseName = baseName.substr(0, extPos);
-                            }
-
-                            // 检查任何以这个基本名称开头的锁文件是否在使用中
-                            for (const auto& entry : m_lockFiles) {
-                                if (entry.first.find(baseName) != std::wstring::npos) {
-                                    inUse = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (!inUse) {
-                            // 安全地尝试打开并删除未使用的文件
-                            HANDLE hFile = CreateFile(fullPath.c_str(),
-                                GENERIC_READ,
-                                FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                NULL,
-                                OPEN_EXISTING,
-                                FILE_ATTRIBUTE_NORMAL,
-                                NULL);
-
-                            if (hFile != INVALID_HANDLE_VALUE) {
-                                CloseHandle(hFile);
-                                DeleteFile(fullPath.c_str());
-
-                                // 同时删除对应的.rlc文件
-                                std::wstring rlcPath = fullPath;
-                                size_t extPos = rlcPath.rfind(L".wlc");
-                                if (extPos != std::wstring::npos) {
-                                    rlcPath = rlcPath.substr(0, extPos) + L".rlc";
-                                    DeleteFile(rlcPath.c_str());
-                                }
-                            }
-                        }
-                    } while (FindNextFile(hFind, &findData));
-
-                    FindClose(hFind);
-                }
-            }
-            catch (...) {
-                // 忽略清理过程中的任何异常
-            }
-        }
-
-    private:
-        LockFileRegistry() {
-            // 注册进程退出回调，确保程序退出时清理锁文件
-            std::atexit([]() {
-                LockFileRegistry::getInstance().cleanupStaleFiles();
-                });
-        }
-
-        ~LockFileRegistry() {
-            cleanupStaleFiles();
-        }
-
-        void cleanupLockFile(const std::wstring& filePath) {
-            // 防止多线程同时清理同一个文件
-            std::lock_guard<std::mutex> lock(m_mutex);
-            try {
-                // 构造锁文件路径
-                TCHAR tempPath[MAX_PATH] = { 0 };
-                GetTempPath(MAX_PATH, tempPath);
-                std::wstring lockBasePath = tempPath;
-                if (lockBasePath.back() != L'\\') {
-                    lockBasePath += L"\\";
-                }
-                lockBasePath += L"rwfilelock\\";
-
-                // 获取基本文件名
-                std::wstring filename = filePath;
-                size_t pos = filename.find_last_of(L"\\/");
-                if (pos != std::wstring::npos) {
-                    filename = filename.substr(pos + 1);
-                }
-
-                // 构造读写锁文件路径
-                std::wstring readerWriterLockPath = lockBasePath + filename + L".rlc";
-                std::wstring writerLockPath = lockBasePath + filename + L".wlc";
-
-                // 安全地删除文件
-                // 尝试以独占方式打开文件，确保没有其他进程正在使用
-                HANDLE hFile = CreateFile(readerWriterLockPath.c_str(),
-                    GENERIC_READ | GENERIC_WRITE,
-                    0, // 不共享，确保独占访问
-                    NULL,
-                    OPEN_EXISTING,
-                    FILE_ATTRIBUTE_NORMAL,
-                    NULL);
-
-                if (hFile != INVALID_HANDLE_VALUE) {
-                    CloseHandle(hFile);
-                    DeleteFile(readerWriterLockPath.c_str());
-                }
-
-                hFile = CreateFile(writerLockPath.c_str(),
-                    GENERIC_READ | GENERIC_WRITE,
-                    0, // 不共享，确保独占访问
-                    NULL,
-                    OPEN_EXISTING,
-                    FILE_ATTRIBUTE_NORMAL,
-                    NULL);
-
-                if (hFile != INVALID_HANDLE_VALUE) {
-                    CloseHandle(hFile);
-                    DeleteFile(writerLockPath.c_str());
-                }
-            }
-            catch (...) {
-                // 忽略清理过程中的任何异常
-            }
-        }
-
-        std::mutex m_mutex;
-        std::map<std::wstring, int> m_lockFiles; // 文件路径到引用计数的映射
-    };
 }
 
 // 注册锁文件到中央注册表
