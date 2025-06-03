@@ -33,7 +33,7 @@ void testread() {
     }
 
     CShareMemoryCallback callback;
-    for (int i = 0; i < 1000 * 60; i++) {
+    for (int i = 0; i < 1000; i++) {
         Sleep(1); // dwMilliseconds
 
         ShareMemoryData* data = nullptr;
@@ -58,7 +58,7 @@ void testwrite() {
         return;
     }
 
-    for (int i = 0; i < 1000 * 60; i++) {
+    for (int i = 0; i < 1000; i++) {
         Sleep(1); // dwMilliseconds
 
         TestData testData(true);

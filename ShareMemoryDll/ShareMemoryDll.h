@@ -9,6 +9,10 @@
 #include <vector>
 #include <assert.h>
 #include <time.h>
+#include <wbemidl.h>
+#include <comdef.h>
+#include <oleauto.h>
+#pragma comment(lib, "wbemuuid.lib")
 
 namespace NMt {
     class CReadFileLock;

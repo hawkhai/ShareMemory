@@ -45,11 +45,169 @@ ShareMemoryData* ShareMemory::getContentPtr() {
     return m_pBuffer + getHeadSize();
 }
 
-// 获取系统启动时间作为前缀
+// 使用WMI获取系统真实启动时间
 UINT64 ShareMemory::GetBootTime() {
-    ULONGLONG uptime = GetTickCount64(); // 获取系统启动后经过的毫秒数
-    ULONGLONG bootTime = (ULONGLONG)(time(nullptr)) * 1000 - uptime; // 当前时间 - 运行时间 = 启动时间
-    return bootTime;
+    static UINT64 cachedBootTime = 0;
+    
+    // 只计算一次以确保始终返回相同的值
+    if (cachedBootTime == 0) {
+        // 使用WMI获取系统启动时间
+        HRESULT hres;
+        
+        // 初始COM库
+        hres = CoInitializeEx(0, COINIT_MULTITHREADED);
+        if (SUCCEEDED(hres)) {
+            // 初始COM安全性
+            hres = CoInitializeSecurity(
+                NULL,
+                -1,
+                NULL,
+                NULL,
+                RPC_C_AUTHN_LEVEL_DEFAULT,
+                RPC_C_IMP_LEVEL_IMPERSONATE,
+                NULL,
+                EOAC_NONE,
+                NULL
+            );
+            
+            if (SUCCEEDED(hres) || hres == RPC_E_TOO_LATE) {
+                // 创建WMI实例
+                IWbemLocator* pLoc = NULL;
+                hres = CoCreateInstance(
+                    CLSID_WbemLocator,
+                    0,
+                    CLSCTX_INPROC_SERVER,
+                    IID_IWbemLocator,
+                    (LPVOID*)&pLoc
+                );
+                
+                if (SUCCEEDED(hres) && pLoc) {
+                    IWbemServices* pSvc = NULL;
+                    
+                    // 连接到WMI
+                    hres = pLoc->ConnectServer(
+                        _bstr_t(L"ROOT\\CIMV2"),
+                        NULL,
+                        NULL,
+                        0,
+                        NULL,
+                        0,
+                        0,
+                        &pSvc
+                    );
+                    
+                    if (SUCCEEDED(hres) && pSvc) {
+                        // 设置代理安全级别
+                        hres = CoSetProxyBlanket(
+                            pSvc,
+                            RPC_C_AUTHN_WINNT,
+                            RPC_C_AUTHZ_NONE,
+                            NULL,
+                            RPC_C_AUTHN_LEVEL_CALL,
+                            RPC_C_IMP_LEVEL_IMPERSONATE,
+                            NULL,
+                            EOAC_NONE
+                        );
+                        
+                        if (SUCCEEDED(hres)) {
+                            // 查询Win32_OperatingSystem类以获取最后一次启动时间
+                            IEnumWbemClassObject* pEnumerator = NULL;
+                            hres = pSvc->ExecQuery(
+                                bstr_t("WQL"),
+                                bstr_t("SELECT LastBootUpTime FROM Win32_OperatingSystem"),
+                                WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
+                                NULL,
+                                &pEnumerator
+                            );
+                            
+                            if (SUCCEEDED(hres) && pEnumerator) {
+                                IWbemClassObject* pclsObj = NULL;
+                                ULONG uReturn = 0;
+                                
+                                // 获取第一个对象
+                                hres = pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+                                
+                                if (SUCCEEDED(hres) && uReturn > 0) {
+                                    VARIANT vtProp;
+                                    VariantInit(&vtProp);
+                                    
+                                    // 获取LastBootUpTime属性
+                                    hres = pclsObj->Get(L"LastBootUpTime", 0, &vtProp, 0, 0);
+                                    
+                                    if (SUCCEEDED(hres) && vtProp.vt == VT_BSTR) {
+                                        // 处理WMI时间格式: YYYYMMDDHHMMSS.MMMMMM+UUU
+                                        // 例如: 20250602143000.000000+480
+                                        std::wstring wmiTimeStr(vtProp.bstrVal);
+                                        
+                                        if (wmiTimeStr.length() >= 14) {
+                                            // 提取日期时间部分
+                                            int year = _wtoi(wmiTimeStr.substr(0, 4).c_str());
+                                            int month = _wtoi(wmiTimeStr.substr(4, 2).c_str());
+                                            int day = _wtoi(wmiTimeStr.substr(6, 2).c_str());
+                                            int hour = _wtoi(wmiTimeStr.substr(8, 2).c_str());
+                                            int minute = _wtoi(wmiTimeStr.substr(10, 2).c_str());
+                                            int second = _wtoi(wmiTimeStr.substr(12, 2).c_str());
+                                            
+                                            // 转换为UNIX时间戳
+                                            struct tm tmTime;
+                                            memset(&tmTime, 0, sizeof(tmTime));
+                                            tmTime.tm_year = year - 1900; // 年份从1900算起
+                                            tmTime.tm_mon = month - 1;   // 月份从0算起
+                                            tmTime.tm_mday = day;
+                                            tmTime.tm_hour = hour;
+                                            tmTime.tm_min = minute;
+                                            tmTime.tm_sec = second;
+                                            
+                                            // 转换为时间戳
+                                            time_t bootTime = mktime(&tmTime);
+                                            if (bootTime != -1) {
+                                                cachedBootTime = (UINT64)bootTime;
+                                            }
+                                        }
+                                    }
+                                    
+                                    VariantClear(&vtProp);
+                                    pclsObj->Release();
+                                }
+                                
+                                pEnumerator->Release();
+                            }
+                        }
+                        pSvc->Release();
+                    }
+                    pLoc->Release();
+                }
+            }
+            CoUninitialize();
+        }
+        
+        // 如果 WMI 方法失败，尝试使用注册表
+        if (cachedBootTime == 0) {
+            HKEY hKey;
+            if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Control\\Windows", 0, KEY_QUERY_VALUE, &hKey) == ERROR_SUCCESS) {
+                DWORD systemStartTime = 0;
+                DWORD dataSize = sizeof(DWORD);
+                DWORD dataType = 0;
+                if (RegQueryValueEx(hKey, L"SystemStartTime", NULL, &dataType, (LPBYTE)&systemStartTime, &dataSize) == ERROR_SUCCESS) {
+                    if (dataType == REG_DWORD) {
+                        cachedBootTime = systemStartTime;
+                    }
+                }
+                RegCloseKey(hKey);
+            }
+        }
+        
+        // 如果上述方法都失败，创建一个基于当前进程启动时间的标识符
+        if (cachedBootTime == 0) {
+            // 注意：到这里就是真的获取不到系统启动时间
+            // 使用当前时间作为标识符，这样即使不准确，也可以保证在同一个进程中的一致性
+            time_t currentTime;
+            time(&currentTime);
+            cachedBootTime = (UINT64)currentTime;
+        }
+    }
+    
+    return cachedBootTime;
 }
 
 // 清理旧的文件锁（不是当前启动时间的）
