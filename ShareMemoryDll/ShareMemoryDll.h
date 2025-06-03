@@ -1,13 +1,25 @@
 #pragma once
+
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#include <windows.h>
+
+#ifdef SHAREMEMORYDLL_EXPORTS
+#define SHARE_MEMORY_DLLEXPORT __declspec(dllexport)
+#else
+#define SHARE_MEMORY_DLLEXPORT //__declspec(dllimport)
+#endif
+
+#include <Windows.h>
+#include <assert.h>
 #include <iostream>
 #include <string>
 #include <cstring>
 #include <vector>
-#include <assert.h>
+#include <mutex>  // 新增互斥锁支持
+#include <map>    // 新增映射支持
+
+#include "../TestFileLock/RWFileLock.h"
 
 namespace NMt {
     class CReadFileLock;
@@ -34,11 +46,11 @@ namespace ShareMemoryDll
     typedef unsigned char ShareMemoryData;
 
     struct ShareMemoryHeader {
-        INT32 memorySize = 0; // �����ڴ��Ĵ�С��
-        INT32 headSize = 0; // ͷ�Ĵ�С��
-        INT32 contentSize = 0; // ���ݵĴ�С�����Ա仯�ģ���һ��Ҫд����
+        INT32 memorySize = 0; // 整个内存块的大小。
+        INT32 headSize = 0; // 头的大小。
+        INT32 contentSize = 0; // 内容的大小。可以变化的，不一定要写满。
         UINT64 crcCheck = 0;
-        INT32 varReserved = 0; // �����ֶΡ�
+        INT32 varReserved = 0; // 保留字段。
 
         INT32 getMaxContentSize() {
             return memorySize - headSize;
@@ -54,7 +66,7 @@ namespace ShareMemoryDll
     class CShareMemoryCallback : public IShareMemoryInterface {
     public:
         virtual ShareMemoryData* alloc(int size) {
-            auto retv = new ShareMemoryData[size + 1]; // ��Ūһ����
+            auto retv = new ShareMemoryData[size + 1]; // 多弄一个。
             retv[size] = 0;
             return retv;
         }
@@ -93,6 +105,10 @@ namespace ShareMemoryDll
         }
 
     protected:
+        // 锁文件管理方法
+        void registerLockFile();     // 注册锁文件到中央注册表
+        void unregisterLockFile();   // 从中央注册表取消注册锁文件
+
         std::wstring m_sLockedFilePath = L"ShareMemoryLockedFile-.mdb";
         std::wstring m_lpMapName = L"ShareMemoryMap-";
         bool m_write = false;
@@ -109,7 +125,7 @@ namespace ShareMemoryDll
         int getSize() {
             return m_size;
         }
-        
+
     private:
         int writeImpl(ShareMemoryData* data, int size);
 
