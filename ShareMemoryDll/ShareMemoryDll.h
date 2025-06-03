@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -8,6 +8,7 @@
 #include <cstring>
 #include <vector>
 #include <assert.h>
+#include <time.h>
 
 namespace NMt {
     class CReadFileLock;
@@ -80,6 +81,12 @@ namespace ShareMemoryDll
 
         virtual ~ShareMemory();
 
+        // 获取系统启动时间
+        static UINT64 GetBootTime();
+        
+        // 清理旧的文件锁（非当前启动时间的）
+        static void CleanupOldLockFiles(const std::wstring& prefix, const std::wstring& suffixPattern);
+
     private:
         int readImpl(ShareMemoryData*& data, IShareMemoryInterface* callback);
 
@@ -93,8 +100,8 @@ namespace ShareMemoryDll
         }
 
     protected:
-        std::wstring m_sLockedFilePath = L"ShareMemoryLockedFile-.mdb";
-        std::wstring m_lpMapName = L"ShareMemoryMap-";
+        std::wstring m_sLockedFilePath = L"SMLF-.mdb";
+        std::wstring m_lpMapName = L"SMM-";
         bool m_write = false;
         NMt::CReadFileLock* m_pReadFileLock = nullptr;
         NMt::CWriteFileLock* m_pWriteFileLock = nullptr;

@@ -1,6 +1,8 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "ShareMemoryDll.h"
 #include "../TestFileLock/RWFileLock.h"
+#include <Winbase.h>
+#include <shlwapi.h>
 
 using namespace ShareMemoryDll;
 
@@ -43,15 +45,106 @@ ShareMemoryData* ShareMemory::getContentPtr() {
     return m_pBuffer + getHeadSize();
 }
 
+// 获取系统启动时间作为前缀
+UINT64 ShareMemory::GetBootTime() {
+    ULONGLONG uptime = GetTickCount64(); // 获取系统启动后经过的毫秒数
+    ULONGLONG bootTime = (ULONGLONG)(time(nullptr)) * 1000 - uptime; // 当前时间 - 运行时间 = 启动时间
+    return bootTime;
+}
+
+// 清理旧的文件锁（不是当前启动时间的）
+void ShareMemory::CleanupOldLockFiles(const std::wstring& prefix, const std::wstring& suffixPattern) {
+    static bool firstRun = true;
+    
+    // 仅在第一次运行时清理
+    if (!firstRun) {
+        return;
+    }
+    firstRun = false;
+    
+    ULONGLONG currentBootTime = GetBootTime();
+    std::wstring currentPrefix = std::to_wstring(currentBootTime) + L"_";
+    
+    TCHAR tempPath[MAX_PATH + 1] = { 0 };
+    DWORD res = GetTempPath(MAX_PATH, tempPath);
+    if (res > 0 && res < MAX_PATH) {
+        if (tempPath[_tcslen(tempPath) - 1] != L'\\') {
+            _tcscat_s(tempPath, MAX_PATH, L"\\");
+        }
+        _tcscat_s(tempPath, MAX_PATH, L"rwfilelock\\");
+        
+        // 查找所有匹配的文件
+        WIN32_FIND_DATA findFileData;
+        std::wstring searchPattern = std::wstring(tempPath) + L"*" + prefix + suffixPattern + L"*.rlc";
+        
+        HANDLE hFind = FindFirstFile(searchPattern.c_str(), &findFileData);
+        
+        if (hFind != INVALID_HANDLE_VALUE) {
+            do {
+                std::wstring fileName = findFileData.cFileName;
+                
+                // 检查文件名是否以数字和下划线开头
+                bool hasBootTimePrefix = false;
+                size_t underscorePos = fileName.find(L"_");
+                
+                if (underscorePos != std::wstring::npos) {
+                    std::wstring bootTimeStr = fileName.substr(0, underscorePos);
+                    // 检查是否为数字
+                    if (!bootTimeStr.empty() && bootTimeStr.find_first_not_of(L"0123456789") == std::wstring::npos) {
+                        hasBootTimePrefix = true;
+                        // 如果不是当前启动时间，删除文件
+                        if (bootTimeStr != std::to_wstring(currentBootTime)) {
+                            std::wstring fullPath = std::wstring(tempPath) + fileName;
+                            DeleteFile(fullPath.c_str());
+                            
+                            // 同时删除对应的 .wlc 文件
+                            std::wstring wlcFile = fullPath;
+                            wlcFile.replace(wlcFile.rfind(L".rlc"), 4, L".wlc");
+                            DeleteFile(wlcFile.c_str());
+                        }
+                    }
+                }
+                
+                // 如果是旧格式文件（没有启动时间前缀）也删除
+                if (!hasBootTimePrefix && fileName.find(prefix) != std::wstring::npos) {
+                    std::wstring fullPath = std::wstring(tempPath) + fileName;
+                    DeleteFile(fullPath.c_str());
+                    
+                    // 同时删除对应的 .wlc 文件
+                    std::wstring wlcFile = fullPath;
+                    wlcFile.replace(wlcFile.rfind(L".rlc"), 4, L".wlc");
+                    DeleteFile(wlcFile.c_str());
+                }
+                
+            } while (FindNextFile(hFind, &findFileData));
+            
+            FindClose(hFind);
+        }
+    }
+}
+
 ShareMemory::ShareMemory(LPCWSTR lpName, bool write) : m_write(write) {
     assert(lpName);
-    m_lpMapName = L"ShareMemoryMap-";
-    m_sLockedFilePath = L"ShareMemoryLockedFile-";
+    m_lpMapName = L"SMM-";
+    
+    // 获取系统启动时间作为前缀
+    ULONGLONG bootTime = GetBootTime();
+    std::wstring bootTimePrefix = std::to_wstring(bootTime) + L"_";
+    
+    // 将启动时间添加到锁文件名前缀
+    m_sLockedFilePath = bootTimePrefix + L"SMLF-";
     if (lpName) {
         m_lpMapName.append(lpName);
         m_sLockedFilePath.append(lpName);
     }
     m_sLockedFilePath.append(L".mdb");
+    
+    static bool first = true;
+    if (first) {
+        first = false;
+        // 清理旧的锁文件
+        CleanupOldLockFiles(L"SMLF-", lpName ? std::wstring(lpName) : L"");
+    }
 
     m_pReadFileLock = new NMt::CReadFileLock(m_sLockedFilePath.c_str());
     m_pWriteFileLock = new NMt::CWriteFileLock(m_sLockedFilePath.c_str());
@@ -194,6 +287,9 @@ int ShareMemory::readImpl(ShareMemoryData*& data, IShareMemoryInterface* callbac
     //printf("memorySize=%d contentSize=%d check=%d \r\n", //
     //    header->memorySize, header->contentSize,
     //    crcCheck == header->crcCheck);
+    if (crcCheck != header->crcCheck) {
+        return -1;
+    }
     return contentSize;
 }
 
