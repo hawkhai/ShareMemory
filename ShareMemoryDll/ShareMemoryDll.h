@@ -91,6 +91,8 @@ namespace ShareMemoryDll
         // 清理旧的文件锁（非当前启动时间的）
         static void CleanupOldLockFiles(const std::wstring& prefix, const std::wstring& suffixPattern);
 
+        static void PrepareForWarmup(); // 表示引擎启动前的准备
+
     private:
         int readImpl(ShareMemoryData*& data, IShareMemoryInterface* callback);
 

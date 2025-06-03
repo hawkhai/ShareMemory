@@ -284,6 +284,11 @@ void ShareMemory::CleanupOldLockFiles(const std::wstring& prefix, const std::wst
     }
 }
 
+void ShareMemory::PrepareForWarmup() { // 表示引擎启动前的准备
+    // 清理旧的锁文件
+    CleanupOldLockFiles(L"SMLF-", L"");
+}
+
 ShareMemory::ShareMemory(LPCWSTR lpName, bool write) : m_write(write) {
     assert(lpName);
     m_lpMapName = L"SMM-";
@@ -300,12 +305,7 @@ ShareMemory::ShareMemory(LPCWSTR lpName, bool write) : m_write(write) {
     }
     m_sLockedFilePath.append(L".mdb");
     
-    static bool first = true;
-    if (first) {
-        first = false;
-        // 清理旧的锁文件
-        CleanupOldLockFiles(L"SMLF-", lpName ? std::wstring(lpName) : L"");
-    }
+    PrepareForWarmup();
 
     m_pReadFileLock = new NMt::CReadFileLock(m_sLockedFilePath.c_str());
     m_pWriteFileLock = new NMt::CWriteFileLock(m_sLockedFilePath.c_str());
