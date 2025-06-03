@@ -197,14 +197,10 @@ UINT64 ShareMemory::GetBootTime() {
             }
         }
         
-        // 如果上述方法都失败，创建一个基于当前进程启动时间的标识符
-        if (cachedBootTime == 0) {
-            // 注意：到这里就是真的获取不到系统启动时间
-            // 使用当前时间作为标识符，这样即使不准确，也可以保证在同一个进程中的一致性
-            time_t currentTime;
-            time(&currentTime);
-            cachedBootTime = (UINT64)currentTime;
-        }
+        // 如果上述方法都失败，返回0
+        // 注意：根据要求，如果获取开机时间失败，返回0而不是当前时间
+        // 这样可以避免在极端情况下进程锁失效
+        // cachedBootTime 保持为 0
     }
     
     return cachedBootTime;
@@ -221,6 +217,13 @@ void ShareMemory::CleanupOldLockFiles(const std::wstring& prefix, const std::wst
     firstRun = false;
     
     ULONGLONG currentBootTime = GetBootTime();
+    
+    // 如果获取启动时间失败（返回0），则不清理旧文件
+    // 这样可以避免意外删除当前会话的锁文件
+    if (currentBootTime == 0) {
+        return;
+    }
+    
     std::wstring currentPrefix = std::to_wstring(currentBootTime) + L"_";
     
     TCHAR tempPath[MAX_PATH + 1] = { 0 };
